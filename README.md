@@ -4,11 +4,11 @@ Converts 32-bit Windows PE/COFF executables into runnable Linux ELF binaries.
 
 ## Scope
 
-`winlift` targets 32-bit, console-mode PE executables built with MinGW
-(statically linked) that only import from a bounded, enumerable set of
-kernel32.dll and msvcrt.dll functions - see `include/shim_abi.h` for the
-exact supported list. Anything outside that set (GUI/user32 apps, COM,
-threads, SEH, delay-loaded imports, ordinal imports, .NET, 64-bit/PE32+,
+`winlift` targets 32-bit PE executables built with MinGW (statically linked),
+console (CUI) or GUI subsystem, that only import from a bounded, enumerable
+set of kernel32.dll/msvcrt.dll/user32.dll functions - see
+`include/shim_abi.h` for the exact supported list. Anything outside that set
+(COM, threads, SEH, delay-loaded imports, ordinal imports, .NET, 64-bit/PE32+,
 DLLs) is rejected at conversion time with a specific diagnostic naming the
 unsupported feature, rather than silently producing a broken binary.
 
@@ -51,6 +51,17 @@ MinGW-compiled binaries exercising process exit codes, console I/O
 plumbing (`GetCommandLineA`) all convert and run correctly. See
 `tests/run_tests.sh` for the full test matrix.
 
-Deliberately out of scope for now: base-relocation/rebasing support,
-GUI/user32, threads, structured exception handling, delay-loaded imports,
-and .NET.
+Milestone 2 (GUI-subsystem admission + a headless-safe user32 shim) is
+implemented and tested end-to-end: real MinGW-compiled `-mwindows` binaries
+using `MessageBoxA` and the basic window-creation/message-loop lifecycle
+(`RegisterClassA`/`CreateWindowExA`/`ShowWindow`/`GetMessage`/`DispatchMessage`)
+convert and run correctly. No real window is ever created or rendered -
+`user32.dll` calls are backed by deterministic no-ops (a fixed sentinel
+`HWND`, etc.), and the message-pump shim always signals loop-exit
+immediately rather than blocking on a real message source, so converted
+GUI binaries behave like well-defined batch processes rather than hanging.
+
+Deliberately out of scope for now: real window rendering (an X11 backend or
+similar), GDI drawing, keyboard/mouse input, multi-window apps, `gdi32.dll`
+broadly, base-relocation/rebasing support, threads, structured exception
+handling, delay-loaded imports, and .NET.

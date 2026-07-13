@@ -36,14 +36,6 @@ check "dump reports KERNEL32.dll import" \
 check "dump reports entry point" \
     grep -q "EntryPoint RVA" /tmp/winlift_dump.txt
 
-# --- M1g-style negative path (available early since M1a already rejects) ---
-
-check "GUI-subsystem exe is rejected" \
-    bash -c "! '$WINLIFT' --dump '$FIXTURES/reject_gui.exe' >/tmp/winlift_gui.txt 2>&1"
-
-check "GUI rejection names the subsystem" \
-    grep -qi "GUI subsystem" /tmp/winlift_gui.txt
-
 # --- M1b: container translation (zero-import PE -> runnable ELF) ---
 
 check "convert minimal_noimport.exe succeeds" \
@@ -132,6 +124,39 @@ check "malformed (truncated) input is rejected without crashing" \
 
 check "no output ELF is written on rejection" \
     bash -c "rm -f /tmp/winlift_should_not_exist.elf; '$WINLIFT' '$FIXTURES/reject_dll.exe' -o /tmp/winlift_should_not_exist.elf >/dev/null 2>&1; [ ! -e /tmp/winlift_should_not_exist.elf ]"
+
+check "unsupported (non-CUI/GUI) subsystem is rejected" \
+    bash -c "! '$WINLIFT' --dump '$FIXTURES/reject_native_subsystem.exe' >/tmp/winlift_native.txt 2>&1"
+
+check "unsupported-subsystem rejection names the subsystem" \
+    grep -qi "subsystem" /tmp/winlift_native.txt
+
+# --- M2a/M2c: GUI-subsystem admission + headless-safe user32 shim ---
+# No real window is ever created or rendered (see runtime/shim_user32.c) -
+# these check that a real GUI-subsystem MinGW binary converts and runs
+# deterministically, the same golden-test style as the M1 checks above.
+
+check "dump reports WINDOWS_GUI subsystem" \
+    bash -c "'$WINLIFT' --dump '$FIXTURES/gui_messagebox.exe' | grep -q 'WINDOWS_GUI'"
+
+check "convert gui_messagebox.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/gui_messagebox.exe" -o /tmp/winlift_msgbox.elf
+
+msgbox_out="$(/tmp/winlift_msgbox.elf)"
+msgbox_exit=$?
+check "converted MessageBoxA binary prints the expected text" \
+    test "$msgbox_out" = "[MessageBoxA] hi: hi"
+
+check "converted MessageBoxA binary exits with the expected code (77)" \
+    test "$msgbox_exit" -eq 77
+
+check "convert gui_window_lifecycle.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/gui_window_lifecycle.exe" -o /tmp/winlift_winlife.elf
+
+# Guarded with `timeout`: a regression that makes the headless GetMessageA
+# shim stop signaling loop-exit would otherwise hang the whole test suite.
+check "converted window-lifecycle binary terminates and exits with the expected code (88) instead of hanging" \
+    bash -c "timeout 5 /tmp/winlift_winlife.elf; test \$? -eq 88"
 
 echo
 echo "$pass passed, $fail failed"

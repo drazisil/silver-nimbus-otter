@@ -59,6 +59,20 @@ void * __attribute__((stdcall)) shim_SetUnhandledExceptionFilter(void *filter) {
     return 0;
 }
 
+/* STARTUPINFOA is 68 bytes on i386 (cb, lpReserved, lpDesktop, lpTitle,
+ * dwX/dwY/dwXSize/dwYSize/dwXCountChars/dwYCountChars, dwFillAttribute,
+ * dwFlags, wShowWindow, cbReserved2, lpReserved2, hStdInput/Output/Error).
+ * We zero it (with dwFlags left 0, i.e. STARTF_USESHOWWINDOW unset) so
+ * WinMainCRTStartup falls back to its own SW_SHOWDEFAULT default for
+ * nCmdShow exactly like real Windows does when no explicit show-window was
+ * requested by the process creator - correct, deterministic, and headless. */
+void __attribute__((stdcall)) shim_GetStartupInfoA(void *lpStartupInfo) {
+    if (!lpStartupInfo) return;
+    unsigned char *p = (unsigned char *)lpStartupInfo;
+    for (int i = 0; i < 68; i++) p[i] = 0;
+    p[0] = 68; /* cb */
+}
+
 void __attribute__((stdcall)) shim_Sleep(unsigned long ms) {
     long ts[2];
     ts[0] = (long)(ms / 1000);

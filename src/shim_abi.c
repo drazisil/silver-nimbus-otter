@@ -34,6 +34,7 @@ const shim_import_entry_t g_shim_imports[] = {
     {"kernel32.dll", "GetEnvironmentStrings", "shim_GetEnvironmentStrings", false},
     {"kernel32.dll", "GetEnvironmentStringsA", "shim_GetEnvironmentStrings", false},
     {"kernel32.dll", "FreeEnvironmentStringsA", "shim_FreeEnvironmentStringsA", false},
+    {"kernel32.dll", "GetStartupInfoA", "shim_GetStartupInfoA", false},
 
     /* msvcrt.dll */
     {"msvcrt.dll", "__getmainargs", "shim_msvcrt_getmainargs", false},
@@ -60,6 +61,26 @@ const shim_import_entry_t g_shim_imports[] = {
     {"msvcrt.dll", "strlen", "shim_msvcrt_strlen", false},
     {"msvcrt.dll", "strncmp", "shim_msvcrt_strncmp", false},
     {"msvcrt.dll", "vfprintf", "shim_msvcrt_vfprintf", false},
+    /* newer mingw-w64 CRTs import these as accessor functions instead of
+     * the plain data symbols above - see runtime/shim_msvcrt.c */
+    {"msvcrt.dll", "__p__iob", "shim_msvcrt_p_iob", false},
+    {"msvcrt.dll", "__p___initenv", "shim_msvcrt_p_initenv", false},
+    {"msvcrt.dll", "__p__acmdln", "shim_msvcrt_p_acmdln", false},
+    {"msvcrt.dll", "_ismbblead", "shim_msvcrt_ismbblead", false},
+    {"msvcrt.dll", "atexit", "shim_msvcrt_atexit", false},
+
+    /* user32.dll - headless/no-op-backed (see runtime/shim_user32.c): no
+     * real window is ever created or rendered, this only makes GUI-subsystem
+     * binaries convert and run deterministically. */
+    {"user32.dll", "MessageBoxA", "shim_MessageBoxA", false},
+    {"user32.dll", "RegisterClassA", "shim_RegisterClassA", false},
+    {"user32.dll", "CreateWindowExA", "shim_CreateWindowExA", false},
+    {"user32.dll", "ShowWindow", "shim_ShowWindow", false},
+    {"user32.dll", "UpdateWindow", "shim_UpdateWindow", false},
+    {"user32.dll", "DefWindowProcA", "shim_DefWindowProcA", false},
+    {"user32.dll", "GetMessageA", "shim_GetMessageA", false},
+    {"user32.dll", "TranslateMessage", "shim_TranslateMessage", false},
+    {"user32.dll", "DispatchMessageA", "shim_DispatchMessageA", false},
 };
 const int g_shim_imports_count = sizeof(g_shim_imports) / sizeof(g_shim_imports[0]);
 

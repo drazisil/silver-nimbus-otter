@@ -27,7 +27,7 @@ def align_up(n, a):
     return (n + a - 1) // a * a
 
 
-def build(exit_code: int) -> bytes:
+def build(exit_code: int, subsystem: int = 3) -> bytes:
     code = code_bytes(exit_code)
 
     dos_header = bytearray(64)
@@ -72,7 +72,7 @@ def build(exit_code: int) -> bytes:
         size_of_image,     # SizeOfImage
         size_of_headers,   # SizeOfHeaders
         0,                 # CheckSum
-        3,                 # Subsystem (WINDOWS_CUI)
+        subsystem,         # Subsystem
         0,                 # DllCharacteristics
         0x100000, 0x1000,  # StackReserve/Commit
         0x100000, 0x1000,  # HeapReserve/Commit
@@ -97,5 +97,6 @@ def build(exit_code: int) -> bytes:
 if __name__ == '__main__':
     out_path = sys.argv[1]
     exit_code = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    subsystem = int(sys.argv[3]) if len(sys.argv) > 3 else 3
     with open(out_path, 'wb') as f:
-        f.write(build(exit_code))
+        f.write(build(exit_code, subsystem))

@@ -28,6 +28,29 @@ int shim_msvcrt_getmainargs(int *argc, char ***argv, char ***envp, int do_wildca
 int *shim_msvcrt_p_commode(void) { return &commode_value; }
 int *shim_msvcrt_p_fmode(void) { return &fmode_value; }
 
+/* Newer mingw-w64 CRTs import these as accessor functions rather than
+ * directly importing the underlying data symbols (`_iob`, `__initenv`,
+ * `_acmdln`) - both forms are kept so winlift works against either CRT
+ * generation. */
+void *shim_msvcrt_p_iob(void) { return shim_iob; }
+char ***shim_msvcrt_p_initenv(void) { return &shim_data___initenv; }
+
+static char *acmdln_value = 0;
+char **shim_msvcrt_p_acmdln(void) {
+    acmdln_value = shim_cmdline ? shim_cmdline : "";
+    return &acmdln_value;
+}
+
+/* Single-byte/"C"-locale only (see shim_msvcrt_memcpy et al. above): no byte
+ * value is ever a DBCS lead byte, so command-line parsing that consults
+ * this always takes the single-byte path. */
+int shim_msvcrt_ismbblead(unsigned int c) { (void)c; return 0; }
+
+int shim_msvcrt_atexit(void (*fn)(void)) {
+    shim_onexit_register(fn);
+    return 0;
+}
+
 void shim_msvcrt_set_app_type(int type) { (void)type; }
 void shim_msvcrt_setusermatherr(void *handler) { (void)handler; }
 

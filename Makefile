@@ -11,7 +11,7 @@ BIN := winlift
 # --- shim runtime (freestanding i386 ELF code, embedded into winlift) ---
 RUNTIME_CFLAGS := -m32 -nostdlib -ffreestanding -fno-pic -fno-pie -fno-stack-protector \
                    -Wall -Wextra -Iruntime -O2
-RUNTIME_C_SRC  := runtime/shim_startup.c runtime/shim_kernel32.c runtime/shim_msvcrt.c
+RUNTIME_C_SRC  := runtime/shim_startup.c runtime/shim_kernel32.c runtime/shim_msvcrt.c runtime/shim_user32.c
 RUNTIME_OBJ    := runtime/shim_entry.o $(RUNTIME_C_SRC:.c=.o)
 
 .PHONY: all clean test check-mingw check-m32
