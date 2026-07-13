@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "pe_image.h"
+#include "layout.h"
+#include "elf_writer.h"
 
 static void usage(const char *prog) {
     fprintf(stderr,
@@ -62,7 +65,20 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    fprintf(stderr, "winlift: ELF conversion not yet implemented\n");
+    elf_image_spec_t spec;
+    char elferr[256];
+    if (!pe_layout_to_elf_spec(&img, &spec, elferr, sizeof(elferr))) {
+        fprintf(stderr, "winlift: %s\n", elferr);
+        pe_image_free(&img);
+        return 1;
+    }
+    if (!elf_write(output, &spec, elferr, sizeof(elferr))) {
+        fprintf(stderr, "winlift: %s\n", elferr);
+        pe_image_free(&img);
+        return 1;
+    }
+    chmod(output, 0755);
+
     pe_image_free(&img);
-    return 1;
+    return 0;
 }

@@ -12,6 +12,11 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIXTURES="$ROOT/tests/fixtures"
 
+# Hand-assembled PE with zero imports, used to test container-translation
+# mechanics in isolation from CRT/import handling (see mkminipe.py).
+echo "building $FIXTURES/minimal_noimport.exe"
+python3 "$ROOT/tools/mkminipe.py" "$FIXTURES/minimal_noimport.exe" 42
+
 for src in "$FIXTURES"/*.c; do
     [ -e "$src" ] || continue
     case "$(basename "$src")" in

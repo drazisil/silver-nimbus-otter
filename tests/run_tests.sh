@@ -44,6 +44,19 @@ check "GUI-subsystem exe is rejected" \
 check "GUI rejection names the subsystem" \
     grep -qi "GUI subsystem" /tmp/winlift_gui.txt
 
+# --- M1b: container translation (zero-import PE -> runnable ELF) ---
+
+check "convert minimal_noimport.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/minimal_noimport.exe" -o /tmp/winlift_minimal.elf
+
+check "converted ELF is recognized as i386 ELF executable" \
+    bash -c "file /tmp/winlift_minimal.elf | grep -q 'ELF 32-bit LSB executable, Intel 80386'"
+
+/tmp/winlift_minimal.elf
+minimal_exit=$?
+check "converted ELF runs and exits with the expected code (42)" \
+    test "$minimal_exit" -eq 42
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

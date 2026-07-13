@@ -2,7 +2,8 @@ CC       ?= gcc
 CFLAGS   ?= -std=c11 -Wall -Wextra -Wno-unused-parameter -O2 -Iinclude -MMD -MP
 LDFLAGS  ?=
 
-SRC := src/main.c src/diagnostics.c src/pe_reader.c src/pe_imports.c src/pe_relocs.c src/pe_dump.c
+SRC := src/main.c src/diagnostics.c src/pe_reader.c src/pe_imports.c src/pe_relocs.c src/pe_dump.c \
+       src/elf_writer.c src/layout.c
 OBJ := $(SRC:.c=.o)
 DEP := $(SRC:.c=.d)
 BIN := winlift
