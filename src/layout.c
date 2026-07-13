@@ -32,7 +32,7 @@ static uint32_t pe_section_flags_to_elf(uint32_t characteristics) {
  * something on the target system.) */
 bool pe_layout_to_elf_spec(const pe_image_t *img, elf_image_spec_t *out_spec,
                             char *errbuf, size_t errbuf_len) {
-    if (img->n_sections <= 0 || img->n_sections > ELF_MAX_SEGMENTS) {
+    if (img->n_sections <= 0 || img->n_sections + 1 > ELF_MAX_SEGMENTS) {
         if (errbuf) snprintf(errbuf, errbuf_len, "unsupported: %d sections (0 or too many)", img->n_sections);
         return false;
     }
@@ -44,11 +44,27 @@ bool pe_layout_to_elf_spec(const pe_image_t *img, elf_image_spec_t *out_spec,
     out_spec->n_segments = 0;
     out_spec->entry = img->image_base + img->entry_point_rva;
 
-    /* Headers occupy file offset 0..phdrs_end (see elf_writer.c); the
-     * first section's segment starts at the next page boundary, which is
+    /* ELF headers occupy file offset 0..phdrs_end (see elf_writer.c); the
+     * first segment we emit starts at the next page boundary, which is
      * always >= that since a handful of program headers fit comfortably
      * inside one page. */
     uint32_t cur_file_off = PAGE_SIZE;
+
+    /* Map the PE header region itself (RVA 0..SizeOfHeaders) too, not just
+     * the sections: real Windows PE loaders always do this, and CRT startup
+     * code sometimes reads its own headers directly (e.g. re-checking the
+     * 'MZ'/DOS-header magic at ImageBase as a sanity check) - discovered by
+     * hitting exactly that crash against a real MinGW-compiled binary. */
+    {
+        elf_segment_t *seg = &out_spec->segments[out_spec->n_segments++];
+        seg->vaddr = img->image_base;
+        seg->flags = PF_R;
+        seg->file_offset = cur_file_off;
+        seg->filesz = img->size_of_headers;
+        seg->memsz = img->size_of_headers;
+        seg->data = img->size_of_headers > 0 ? img->raw : NULL;
+        cur_file_off = align_up(cur_file_off + seg->filesz, PAGE_SIZE);
+    }
 
     for (int i = 0; i < img->n_sections; i++) {
         const pe_section_t *s = &img->sections[i];

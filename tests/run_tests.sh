@@ -57,6 +57,16 @@ minimal_exit=$?
 check "converted ELF runs and exits with the expected code (42)" \
     test "$minimal_exit" -eq 42
 
+# --- M1c: CRT bootstrap shim (real MinGW binary with kernel32/msvcrt imports) ---
+
+check "convert real hello_exitcode.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/hello_exitcode.exe" -o /tmp/winlift_hello.elf
+
+"/tmp/winlift_hello.elf"
+hello_exit=$?
+check "converted real CRT binary runs and exits with the expected code (42)" \
+    test "$hello_exit" -eq 42
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -6,6 +6,7 @@
 #include "pe_image.h"
 #include "layout.h"
 #include "elf_writer.h"
+#include "stub_patch.h"
 
 static void usage(const char *prog) {
     fprintf(stderr,
@@ -65,9 +66,27 @@ int main(int argc, char **argv) {
         return 2;
     }
 
+    /* Replace the read-only mmap'd/loaded file bytes with a private,
+     * mutable copy: stub_patch_apply() rewrites IAT slots in place, and
+     * layout.c's segment .data pointers reference these same bytes. */
+    uint8_t *mutable_raw = malloc(img.raw_size);
+    if (!mutable_raw) {
+        fprintf(stderr, "winlift: out of memory\n");
+        pe_image_free(&img);
+        return 1;
+    }
+    memcpy(mutable_raw, img.raw, img.raw_size);
+    free(img.raw);
+    img.raw = mutable_raw;
+
     elf_image_spec_t spec;
     char elferr[256];
     if (!pe_layout_to_elf_spec(&img, &spec, elferr, sizeof(elferr))) {
+        fprintf(stderr, "winlift: %s\n", elferr);
+        pe_image_free(&img);
+        return 1;
+    }
+    if (!stub_patch_apply(&img, &spec, elferr, sizeof(elferr))) {
         fprintf(stderr, "winlift: %s\n", elferr);
         pe_image_free(&img);
         return 1;

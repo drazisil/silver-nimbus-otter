@@ -2,3 +2,5 @@ winlift
 *.o
 *.d
 tests/fixtures/*.exe
+runtime/shim.elf
+src/shim_blob.c
