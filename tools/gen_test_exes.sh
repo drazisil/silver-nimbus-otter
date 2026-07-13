@@ -17,22 +17,30 @@ FIXTURES="$ROOT/tests/fixtures"
 echo "building $FIXTURES/minimal_noimport.exe"
 python3 "$ROOT/tools/mkminipe.py" "$FIXTURES/minimal_noimport.exe" 42
 
+# Hand-assembled PE with an unsupported subsystem value (1 = NATIVE, neither
+# CUI=3 nor GUI=2), used to keep PE_ERR_UNSUPPORTED_SUBSYSTEM covered now
+# that GUI=2 is accepted alongside CUI=3 (see M2).
+echo "building $FIXTURES/reject_native_subsystem.exe"
+python3 "$ROOT/tools/mkminipe.py" "$FIXTURES/reject_native_subsystem.exe" 0 1
+
 for src in "$FIXTURES"/*.c; do
     [ -e "$src" ] || continue
     case "$(basename "$src")" in
-        reject_*.c) continue ;; # negative-path fixtures are built separately below
+        reject_*.c|gui_*.c) continue ;; # built separately below (need non-default flags)
     esac
     out="${src%.c}.exe"
     echo "building $out"
     i686-w64-mingw32-gcc -O0 -static -o "$out" "$src"
 done
 
-# Negative-path fixture: GUI subsystem, must be rejected by winlift.
-if [ -f "$FIXTURES/reject_gui.c" ]; then
-    echo "building $FIXTURES/reject_gui.exe"
-    i686-w64-mingw32-gcc -O0 -mwindows -static -o "$FIXTURES/reject_gui.exe" \
-        "$FIXTURES/reject_gui.c" -luser32
-fi
+# GUI-subsystem fixtures (M2): need -mwindows -luser32, unlike the plain
+# console fixtures built by the loop above.
+for src in "$FIXTURES"/gui_*.c; do
+    [ -e "$src" ] || continue
+    out="${src%.c}.exe"
+    echo "building $out"
+    i686-w64-mingw32-gcc -O0 -mwindows -static -o "$out" "$src" -luser32
+done
 
 # Negative-path fixture: DLL, must be rejected by winlift.
 echo "building $FIXTURES/reject_dll.exe"

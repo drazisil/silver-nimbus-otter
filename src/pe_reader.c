@@ -168,14 +168,9 @@ bool pe_image_load(const char *path, pe_image_t *out, pe_error_t *err) {
                      "unsupported: unrecognized optional header magic 0x%04x", opt.Magic);
         goto fail;
     }
-    if (opt.Subsystem == PE_SUBSYSTEM_WINDOWS_GUI) {
-        pe_error_set(err, PE_ERR_GUI_SUBSYSTEM,
-                     "unsupported: GUI subsystem (user32/gdi32-style apps) not supported");
-        goto fail;
-    }
-    if (opt.Subsystem != PE_SUBSYSTEM_WINDOWS_CUI) {
+    if (opt.Subsystem != PE_SUBSYSTEM_WINDOWS_CUI && opt.Subsystem != PE_SUBSYSTEM_WINDOWS_GUI) {
         pe_error_set(err, PE_ERR_UNSUPPORTED_SUBSYSTEM,
-                     "unsupported: subsystem %u not supported (only Windows console/CUI=3)",
+                     "unsupported: subsystem %u not supported (only Windows console/CUI=3 or GUI=2)",
                      opt.Subsystem);
         goto fail;
     }

@@ -9,7 +9,7 @@ void pe_dump(const pe_image_t *img, FILE *out) {
     fprintf(out, "SizeOfImage:      0x%08x\n", img->size_of_image);
     fprintf(out, "SizeOfHeaders:    0x%08x\n", img->size_of_headers);
     fprintf(out, "Subsystem:        %u (%s)\n", img->subsystem,
-            img->subsystem == 3 ? "WINDOWS_CUI" : "other");
+            img->subsystem == 3 ? "WINDOWS_CUI" : img->subsystem == 2 ? "WINDOWS_GUI" : "other");
     fprintf(out, "SectionAlignment: 0x%08x\n", img->section_alignment);
     fprintf(out, "FileAlignment:    0x%08x\n", img->file_alignment);
     fprintf(out, "TLS present:      %s (%d callback%s)\n", img->has_tls ? "yes" : "no",

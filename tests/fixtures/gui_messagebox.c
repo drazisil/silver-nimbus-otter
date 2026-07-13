@@ -2,5 +2,5 @@
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     MessageBoxA(NULL, "hi", "hi", MB_OK);
-    return 0;
+    return 77;
 }
