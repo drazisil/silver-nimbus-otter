@@ -1,0 +1,4 @@
+winlift
+*.o
+*.d
+tests/fixtures/*.exe
