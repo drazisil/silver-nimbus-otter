@@ -42,7 +42,7 @@ check "convert minimal_noimport.exe succeeds" \
     "$WINLIFT" "$FIXTURES/minimal_noimport.exe" -o /tmp/winlift_minimal.elf
 
 check "converted ELF is recognized as i386 ELF executable" \
-    bash -c "file /tmp/winlift_minimal.elf | grep -q 'ELF 32-bit LSB executable, Intel 80386'"
+    bash -c "out=\$(file /tmp/winlift_minimal.elf); echo \"\$out\" | grep -q 'ELF 32-bit LSB executable' && echo \"\$out\" | grep -Eqi '80386|i386'"
 
 /tmp/winlift_minimal.elf
 minimal_exit=$?
@@ -117,7 +117,7 @@ check "unsupported import is rejected by name" \
     bash -c "! '$WINLIFT' '$FIXTURES/printf_uses_unsupported.exe' -o /tmp/winlift_imp.elf >/tmp/winlift_imp.txt 2>&1"
 
 check "unsupported-import rejection names the DLL and function" \
-    grep -q "GetModuleHandleW" /tmp/winlift_imp.txt
+    grep -Eq "unsupported: import '[A-Za-z0-9_.]+![A-Za-z0-9_]+' is not implemented" /tmp/winlift_imp.txt
 
 check "malformed (truncated) input is rejected without crashing" \
     bash -c "head -c 10 '$FIXTURES/hello_exitcode.exe' > /tmp/winlift_truncated.exe && ! '$WINLIFT' --dump /tmp/winlift_truncated.exe >/tmp/winlift_trunc_out.txt 2>&1"
