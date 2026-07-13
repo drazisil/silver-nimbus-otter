@@ -227,6 +227,28 @@ void shim_run_atexit(void) {
     }
 }
 
+static char *g_env_block = 0;
+
+char *shim_env_block(void) {
+    if (g_env_block) return g_env_block;
+    unsigned long total = 1; /* final extra NUL terminating the whole block */
+    int n = 0;
+    while (shim_envp && shim_envp[n]) {
+        total += local_strlen(shim_envp[n]) + 1;
+        n++;
+    }
+    g_env_block = (char *)shim_heap_alloc(total);
+    if (!g_env_block) return "";
+    unsigned long pos = 0;
+    for (int i = 0; i < n; i++) {
+        unsigned long l = local_strlen(shim_envp[i]);
+        for (unsigned long j = 0; j < l; j++) g_env_block[pos++] = shim_envp[i][j];
+        g_env_block[pos++] = '\0';
+    }
+    g_env_block[pos] = '\0';
+    return g_env_block;
+}
+
 void shim_process_exit(int code) {
     shim_syscall1(SYS_exit_group, code);
     __builtin_unreachable();

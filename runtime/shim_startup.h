@@ -30,6 +30,10 @@ extern char *shim_cmdline; /* argv joined with spaces, for GetCommandLineA */
 
 void shim_startup_init(int argc, char **argv, char **envp);
 
+/* Double-null-terminated "VAR=value\0VAR2=value2\0\0" block, built lazily
+ * from shim_envp on first call and cached, for GetEnvironmentStrings(A). */
+char *shim_env_block(void);
+
 void *shim_heap_alloc(unsigned long size);
 void  shim_heap_free(void *p);
 void *shim_heap_realloc(void *p, unsigned long size);

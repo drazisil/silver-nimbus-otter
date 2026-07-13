@@ -129,9 +129,53 @@ unsigned long __attribute__((stdcall)) shim_VirtualQuery(const void *addr, shim_
     return sizeof(shim_mbi_t);
 }
 
+void * __attribute__((stdcall)) shim_GetProcessHeap(void) {
+    return (void *)0x1; /* single fixed sentinel heap handle; we only ever have one heap */
+}
+
+void * __attribute__((stdcall)) shim_HeapAlloc(void *heap, unsigned long flags, unsigned long size) {
+    (void)heap;
+    void *p = shim_heap_alloc(size);
+    if (p && (flags & 0x8 /* HEAP_ZERO_MEMORY */)) {
+        char *c = (char *)p;
+        for (unsigned long i = 0; i < size; i++) c[i] = 0;
+    }
+    return p;
+}
+
+int __attribute__((stdcall)) shim_HeapFree(void *heap, unsigned long flags, void *mem) {
+    (void)heap;
+    (void)flags;
+    shim_heap_free(mem);
+    return 1;
+}
+
+void * __attribute__((stdcall)) shim_HeapReAlloc(void *heap, unsigned long flags, void *mem, unsigned long size) {
+    (void)heap;
+    void *p = shim_heap_realloc(mem, size);
+    if (p && (flags & 0x8)) {
+        char *c = (char *)p;
+        for (unsigned long i = 0; i < size; i++) c[i] = 0;
+    }
+    return p;
+}
+
 void __attribute__((stdcall)) shim_ExitProcess(unsigned long code) {
     shim_run_atexit();
     shim_process_exit((int)code);
+}
+
+char * __attribute__((stdcall)) shim_GetCommandLineA(void) {
+    return shim_cmdline ? shim_cmdline : "";
+}
+
+char * __attribute__((stdcall)) shim_GetEnvironmentStrings(void) {
+    return shim_env_block();
+}
+
+int __attribute__((stdcall)) shim_FreeEnvironmentStringsA(char *block) {
+    (void)block; /* backed by our own heap, never actually freed - see shim_heap_free */
+    return 1;
 }
 
 void * __attribute__((stdcall)) shim_GetStdHandle(long which) {

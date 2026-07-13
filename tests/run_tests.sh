@@ -67,6 +67,42 @@ hello_exit=$?
 check "converted real CRT binary runs and exits with the expected code (42)" \
     test "$hello_exit" -eq 42
 
+# --- M1d: console/file I/O (WriteFile/GetStdHandle) ---
+
+check "convert hello_console.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/hello_console.exe" -o /tmp/winlift_console.elf
+
+console_out="$(/tmp/winlift_console.elf)"
+console_exit=$?
+check "converted console binary prints the expected text" \
+    test "$console_out" = "hello from WriteFile"
+
+check "converted console binary returns the byte count via exit code (21)" \
+    test "$console_exit" -eq 21
+
+# --- M1e: heap (GetProcessHeap/HeapAlloc/HeapFree) ---
+
+check "convert heap_alloc.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/heap_alloc.exe" -o /tmp/winlift_heap.elf
+
+/tmp/winlift_heap.elf
+heap_exit=$?
+check "converted heap binary computes the expected checksum (90)" \
+    test "$heap_exit" -eq 90
+
+# --- M1f: argv / GetCommandLineA plumbing ---
+
+check "convert argv_env.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/argv_env.exe" -o /tmp/winlift_argv.elf
+
+argv_out="$(/tmp/winlift_argv.elf foo 5 10 15)"
+argv_exit=$?
+check "converted argv binary reports a GetCommandLineA cmdline containing the args" \
+    bash -c "echo \"$argv_out\" | grep -q 'foo 5 10 15'"
+
+check "converted argv binary sums argv[1..] via exit code (30)" \
+    test "$argv_exit" -eq 30
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

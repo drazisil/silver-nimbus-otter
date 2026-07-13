@@ -26,6 +26,14 @@ const shim_import_entry_t g_shim_imports[] = {
     {"kernel32.dll", "WriteFile", "shim_WriteFile", false},
     {"kernel32.dll", "ReadFile", "shim_ReadFile", false},
     {"kernel32.dll", "CreateFileA", "shim_CreateFileA", false},
+    {"kernel32.dll", "GetProcessHeap", "shim_GetProcessHeap", false},
+    {"kernel32.dll", "HeapAlloc", "shim_HeapAlloc", false},
+    {"kernel32.dll", "HeapFree", "shim_HeapFree", false},
+    {"kernel32.dll", "HeapReAlloc", "shim_HeapReAlloc", false},
+    {"kernel32.dll", "GetCommandLineA", "shim_GetCommandLineA", false},
+    {"kernel32.dll", "GetEnvironmentStrings", "shim_GetEnvironmentStrings", false},
+    {"kernel32.dll", "GetEnvironmentStringsA", "shim_GetEnvironmentStrings", false},
+    {"kernel32.dll", "FreeEnvironmentStringsA", "shim_FreeEnvironmentStringsA", false},
 
     /* msvcrt.dll */
     {"msvcrt.dll", "__getmainargs", "shim_msvcrt_getmainargs", false},
