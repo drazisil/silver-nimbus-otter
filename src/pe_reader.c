@@ -68,10 +68,17 @@ const uint8_t *pe_rva_to_ptr(const pe_image_t *img, uint32_t rva, uint32_t min_l
 }
 
 static bool parse_sections(pe_image_t *img, const uint8_t *sec_ptr, int n_sections, pe_error_t *err) {
-    if (n_sections < 0 || n_sections > PE_MAX_SECTIONS) {
+    if (n_sections < 0) {
         pe_error_set(err, PE_ERR_TOO_MANY_SECTIONS,
                      "malformed PE: NumberOfSections=%d out of range", n_sections);
         return false;
+    }
+    if (n_sections > 0) {
+        img->sections = malloc((size_t)n_sections * sizeof(pe_section_t));
+        if (!img->sections) {
+            pe_error_set(err, PE_ERR_MALFORMED, "out of memory parsing sections");
+            return false;
+        }
     }
     for (int i = 0; i < n_sections; i++) {
         pe_section_header_t sh;
@@ -244,6 +251,13 @@ void pe_image_free(pe_image_t *img) {
     if (!img) return;
     free(img->raw);
     free(img->relocs);
+    free(img->sections);
+    for (int i = 0; i < img->n_imports; i++) {
+        free(img->imports[i].funcs);
+    }
+    free(img->imports);
     img->raw = NULL;
     img->relocs = NULL;
+    img->sections = NULL;
+    img->imports = NULL;
 }

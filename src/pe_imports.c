@@ -1,9 +1,24 @@
 #include "import_table.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "pe_format.h"
+
+/* Doubles *arr's capacity (elem_size each) whenever count would reach *cap.
+ * Used for both the DLL array and each DLL's per-function array, neither of
+ * which has a known-upfront length in the PE format (both are walked to a
+ * null terminator), unlike sections which parse_sections() sizes exactly. */
+static bool ensure_capacity(void **arr, int *cap, int count, size_t elem_size) {
+    if (count < *cap) return true;
+    int new_cap = *cap == 0 ? 8 : *cap * 2;
+    void *p = realloc(*arr, (size_t)new_cap * elem_size);
+    if (!p) return false;
+    *arr = p;
+    *cap = new_cap;
+    return true;
+}
 
 static bool read_c_string(const pe_image_t *img, uint32_t rva, char *out, size_t out_cap) {
     /* We don't know the string length up front; probe byte-by-byte via
@@ -20,8 +35,8 @@ static bool read_c_string(const pe_image_t *img, uint32_t rva, char *out, size_t
 }
 
 static bool parse_one_dll(pe_image_t *img, const pe_import_descriptor_t *desc, pe_error_t *err) {
-    if (img->n_imports >= PE_MAX_DLLS) {
-        pe_error_set(err, PE_ERR_TOO_MANY_IMPORTS, "malformed PE: too many imported DLLs");
+    if (!ensure_capacity((void **)&img->imports, &img->imports_cap, img->n_imports, sizeof(pe_import_dll_t))) {
+        pe_error_set(err, PE_ERR_MALFORMED, "out of memory parsing imported DLLs");
         return false;
     }
     pe_import_dll_t *dll = &img->imports[img->n_imports];
@@ -52,9 +67,8 @@ static bool parse_one_dll(pe_image_t *img, const pe_import_descriptor_t *desc, p
         memcpy(&thunk, tp, 4);
         if (thunk == 0) break;
 
-        if (dll->n_funcs >= PE_MAX_FUNCS) {
-            pe_error_set(err, PE_ERR_TOO_MANY_IMPORTS,
-                         "malformed PE: too many imports from '%s'", dll->dll_name);
+        if (!ensure_capacity((void **)&dll->funcs, &dll->funcs_cap, dll->n_funcs, sizeof(pe_import_func_t))) {
+            pe_error_set(err, PE_ERR_MALFORMED, "out of memory parsing imports from '%s'", dll->dll_name);
             return false;
         }
         pe_import_func_t *fn = &dll->funcs[dll->n_funcs];
@@ -62,14 +76,17 @@ static bool parse_one_dll(pe_image_t *img, const pe_import_descriptor_t *desc, p
         fn->iat_rva = iat_rva + (uint32_t)i * 4;
 
         if (thunk & PE_ORDINAL_FLAG32) {
+            /* No import-by-name structure exists for an ordinal thunk - the
+             * synthesized "#<ordinal>" name is what shim_lookup_import()
+             * matches against later, exactly like a real function name (see
+             * g_shim_imports[] in shim_abi.c). Unsupported ordinals still
+             * get rejected then, via the same generic unsupported-import
+             * diagnostic every unrecognized name gets. */
             fn->by_ordinal = true;
             fn->ordinal = (uint16_t)(thunk & 0xFFFF);
             snprintf(fn->name, sizeof(fn->name), "#%u", fn->ordinal);
-            pe_error_set(err, PE_ERR_ORDINAL_IMPORT,
-                         "unsupported: import by ordinal not supported (%s ordinal %u) - "
-                         "rebuild with default settings which import by name",
-                         dll->dll_name, fn->ordinal);
-            return false;
+            dll->n_funcs++;
+            continue;
         }
 
         const uint8_t *namep = pe_rva_to_ptr(img, thunk, sizeof(pe_import_by_name_t));

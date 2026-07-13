@@ -81,6 +81,14 @@ const shim_import_entry_t g_shim_imports[] = {
     {"user32.dll", "GetMessageA", "shim_GetMessageA", false},
     {"user32.dll", "TranslateMessage", "shim_TranslateMessage", false},
     {"user32.dll", "DispatchMessageA", "shim_DispatchMessageA", false},
+
+    /* comctl32.dll - one well-known, version-stable ordinal only (see M3
+     * notes in README): ordinal imports are otherwise still rejected via
+     * PE_ERR_UNSUPPORTED_FUNC like any unrecognized name, since ordinal
+     * meanings are version-specific and not something to build a general
+     * database for. The func_name here is the synthesized "#<ordinal>"
+     * string pe_imports.c assigns to every ordinal import. */
+    {"COMCTL32.dll", "#17", "shim_InitCommonControls", false}, /* InitCommonControls */
 };
 const int g_shim_imports_count = sizeof(g_shim_imports) / sizeof(g_shim_imports[0]);
 

@@ -4,13 +4,20 @@ Converts 32-bit Windows PE/COFF executables into runnable Linux ELF binaries.
 
 ## Scope
 
-`winlift` targets 32-bit PE executables built with MinGW (statically linked),
-console (CUI) or GUI subsystem, that only import from a bounded, enumerable
-set of kernel32.dll/msvcrt.dll/user32.dll functions - see
-`include/shim_abi.h` for the exact supported list. Anything outside that set
-(COM, threads, SEH, delay-loaded imports, ordinal imports, .NET, 64-bit/PE32+,
-DLLs) is rejected at conversion time with a specific diagnostic naming the
-unsupported feature, rather than silently producing a broken binary.
+`winlift` targets 32-bit PE executables, console (CUI) or GUI subsystem,
+that only import from a bounded, enumerable set of
+kernel32.dll/msvcrt.dll/user32.dll/comctl32.dll functions - see
+`include/shim_abi.h` for the exact supported list. Imports are matched by
+name, or - for the one supported ordinal import - by a synthesized
+`#<ordinal>` name (see Milestone 3 below); PE parsing itself isn't limited
+to MinGW-shaped binaries (arbitrary numbers of imported DLLs, functions, and
+base relocations are all handled), but which specific imports are actually
+satisfiable is still the bounded, enumerable set in `shim_abi.c` regardless
+of which toolchain produced the binary. Anything outside that set (COM,
+threads, SEH, delay-loaded imports, unsupported ordinal imports, .NET,
+64-bit/PE32+, DLLs) is rejected at conversion time with a specific
+diagnostic naming the unsupported feature, rather than silently producing a
+broken binary.
 
 The original x86 code is not recompiled: PE and ELF both run the same i386
 machine code with a compatible base calling convention, so conversion is
@@ -61,7 +68,26 @@ convert and run correctly. No real window is ever created or rendered -
 immediately rather than blocking on a real message source, so converted
 GUI binaries behave like well-defined batch processes rather than hanging.
 
+Milestone 3 (structural PE-parsing robustness) is implemented and tested
+end-to-end: PE sections, imported DLLs, and per-DLL imported functions are
+all heap-allocated and grown as parsed rather than capped at small fixed
+sizes, and base relocations no longer hit an arbitrary count ceiling below
+what the format itself supports - real-world binaries (tested against a
+large, genuine 2002 MSVC-linked game client with 19 imported DLLs and ~200K
+relocations) are no longer rejected on parsing grounds alone. Ordinal
+imports are no longer a blanket rejection either: they're unified into the
+same named-import matching `shim_abi.c` already used (via a synthesized
+`#<ordinal>` name), with exactly one real, well-known, version-stable case
+supported end-to-end - `COMCTL32.dll` ordinal 17 (`InitCommonControls`,
+headless no-op). Every other ordinal import is still rejected, the same way
+any unrecognized named import is.
+
 Deliberately out of scope for now: real window rendering (an X11 backend or
 similar), GDI drawing, keyboard/mouse input, multi-window apps, `gdi32.dll`
-broadly, base-relocation/rebasing support, threads, structured exception
-handling, delay-loaded imports, and .NET.
+broadly, general ordinal-to-name resolution (ordinal meanings are
+version-specific; only one well-known case is supported), base-relocation/
+rebasing *application* (relocations are parsed and counted but never
+applied - still fine as long as the ELF loads at the PE's own preferred
+`ImageBase`), Direct3D/DirectSound/DirectInput/other COM-based APIs (a
+fundamentally different problem from IAT-patchable imports), threads,
+structured exception handling, delay-loaded imports, and .NET.
