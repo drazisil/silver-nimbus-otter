@@ -103,6 +103,36 @@ check "converted argv binary reports a GetCommandLineA cmdline containing the ar
 check "converted argv binary sums argv[1..] via exit code (30)" \
     test "$argv_exit" -eq 30
 
+# --- M1g: rejection-path hardening ---
+
+check "DLL is rejected" \
+    bash -c "! '$WINLIFT' --dump '$FIXTURES/reject_dll.exe' >/tmp/winlift_dll.txt 2>&1"
+
+check "DLL rejection names the reason" \
+    grep -qi "DLL" /tmp/winlift_dll.txt
+
+if [ -f "$FIXTURES/reject_pe32plus.exe" ]; then
+    check "64-bit (PE32+) is rejected" \
+        bash -c "! '$WINLIFT' --dump '$FIXTURES/reject_pe32plus.exe' >/tmp/winlift_64.txt 2>&1"
+
+    check "64-bit rejection names the machine type" \
+        grep -qi "machine" /tmp/winlift_64.txt
+else
+    echo "skip - PE32+ rejection (reject_pe32plus.exe not built; x86_64-w64-mingw32-gcc missing)"
+fi
+
+check "unsupported import is rejected by name" \
+    bash -c "! '$WINLIFT' '$FIXTURES/printf_uses_unsupported.exe' -o /tmp/winlift_imp.elf >/tmp/winlift_imp.txt 2>&1"
+
+check "unsupported-import rejection names the DLL and function" \
+    grep -q "GetModuleHandleW" /tmp/winlift_imp.txt
+
+check "malformed (truncated) input is rejected without crashing" \
+    bash -c "head -c 10 '$FIXTURES/hello_exitcode.exe' > /tmp/winlift_truncated.exe && ! '$WINLIFT' --dump /tmp/winlift_truncated.exe >/tmp/winlift_trunc_out.txt 2>&1"
+
+check "no output ELF is written on rejection" \
+    bash -c "rm -f /tmp/winlift_should_not_exist.elf; '$WINLIFT' '$FIXTURES/reject_dll.exe' -o /tmp/winlift_should_not_exist.elf >/dev/null 2>&1; [ ! -e /tmp/winlift_should_not_exist.elf ]"
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
