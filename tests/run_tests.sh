@@ -158,6 +158,31 @@ check "convert gui_window_lifecycle.exe succeeds" \
 check "converted window-lifecycle binary terminates and exits with the expected code (88) instead of hanging" \
     bash -c "timeout 5 /tmp/winlift_winlife.elf; test \$? -eq 88"
 
+# --- M3: structural PE-parsing robustness (ordinal imports + no more
+# arbitrary fixed-array caps) ---
+
+check "dump reports the ordinal import as #17" \
+    bash -c "'$WINLIFT' --dump '$FIXTURES/ordinal_import.exe' | grep -q '#17'"
+
+check "convert ordinal_import.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/ordinal_import.exe" -o /tmp/winlift_ordinal.elf
+
+/tmp/winlift_ordinal.elf
+ordinal_exit=$?
+check "converted ordinal-import binary calls through to shim_InitCommonControls and exits with the expected code (55)" \
+    test "$ordinal_exit" -eq 55
+
+check "dump reports all 20 DLLs (past the old PE_MAX_DLLS=16 limit)" \
+    bash -c "test \"\$('$WINLIFT' --dump '$FIXTURES/many_dlls.exe' | grep -c '\.dll (')\" -eq 20"
+
+check "convert many_dlls.exe succeeds" \
+    "$WINLIFT" "$FIXTURES/many_dlls.exe" -o /tmp/winlift_many.elf
+
+/tmp/winlift_many.elf
+many_exit=$?
+check "converted many-DLL binary runs and exits with the expected code (66)" \
+    test "$many_exit" -eq 66
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

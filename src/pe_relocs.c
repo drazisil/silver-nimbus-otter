@@ -28,10 +28,6 @@ bool pe_parse_relocs_dir(pe_image_t *img, uint32_t dir_rva, uint32_t dir_size, p
     }
 
     if (count == 0) return true;
-    if (count > PE_MAX_RELOCS) {
-        pe_error_set(err, PE_ERR_MALFORMED, "malformed PE: too many base relocations (%d)", count);
-        return false;
-    }
     img->relocs = malloc((size_t)count * sizeof(pe_reloc_t));
     if (!img->relocs) {
         pe_error_set(err, PE_ERR_MALFORMED, "out of memory parsing relocations");

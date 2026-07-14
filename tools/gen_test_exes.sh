@@ -23,6 +23,19 @@ python3 "$ROOT/tools/mkminipe.py" "$FIXTURES/minimal_noimport.exe" 42
 echo "building $FIXTURES/reject_native_subsystem.exe"
 python3 "$ROOT/tools/mkminipe.py" "$FIXTURES/reject_native_subsystem.exe" 0 1
 
+# Hand-assembled PE with a single ordinal import (COMCTL32.dll ordinal 17 =
+# InitCommonControls), actually called through its IAT slot before exiting -
+# proves winlift resolves *and* invokes the one supported ordinal (see M3).
+# No real compiler will produce this on demand.
+echo "building $FIXTURES/ordinal_import.exe"
+python3 "$ROOT/tools/mkminipe.py" ordinal "$FIXTURES/ordinal_import.exe" 55 COMCTL32.dll 17
+
+# Hand-assembled PE importing from 20 DLLs (each with zero functions), to
+# prove winlift's import parsing isn't capped at some small fixed DLL count
+# now that the old PE_MAX_DLLS=16 limit is gone (see M3).
+echo "building $FIXTURES/many_dlls.exe"
+python3 "$ROOT/tools/mkminipe.py" many_dlls "$FIXTURES/many_dlls.exe" 66 20
+
 for src in "$FIXTURES"/*.c; do
     [ -e "$src" ] || continue
     case "$(basename "$src")" in

@@ -8,10 +8,6 @@
 #include <stdio.h>
 #include "diagnostics.h"
 
-#define PE_MAX_SECTIONS   32
-#define PE_MAX_DLLS       16
-#define PE_MAX_FUNCS      256
-#define PE_MAX_RELOCS     65536
 #define PE_MAX_TLS_CALLBACKS 16
 
 typedef struct {
@@ -33,7 +29,8 @@ typedef struct {
 typedef struct {
     char     dll_name[64];
     int      n_funcs;
-    pe_import_func_t funcs[PE_MAX_FUNCS];
+    int      funcs_cap;
+    pe_import_func_t *funcs; /* heap-allocated, grown as the thunk table is walked */
 } pe_import_dll_t;
 
 typedef struct {
@@ -50,10 +47,11 @@ typedef struct {
     uint32_t file_alignment;
 
     int n_sections;
-    pe_section_t sections[PE_MAX_SECTIONS];
+    pe_section_t *sections; /* heap-allocated, exactly n_sections entries */
 
     int n_imports;
-    pe_import_dll_t imports[PE_MAX_DLLS];
+    int imports_cap;
+    pe_import_dll_t *imports; /* heap-allocated, grown as the import directory is walked */
 
     int n_relocs;
     pe_reloc_t *relocs; /* heap-allocated, n_relocs entries */
